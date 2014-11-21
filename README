@@ -10,6 +10,10 @@ then it's size can be reduced as well with this tool.
 
 Any contribution to the project is appreciated.
 
+Requirements:
+  - Python 3 or later
+  - lxml (http://lxml.de/installation.html)
+
 
 Kollektor
 =========
