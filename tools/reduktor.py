@@ -44,7 +44,7 @@ class Reduktor(object):
       self._expected_crash_output = crash_output
 
       if crashing:
-          #root = self.remove_unwanted_nodes(root)
+          root = self.remove_unwanted_nodes(root)
           root = self.remove_unwanted_attributes(root)
           utility.write_tree_to_file(root, self._out_file)
       else:
