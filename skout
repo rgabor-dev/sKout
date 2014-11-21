@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+#
+# DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+# Version 2, December 2004
+#
+# Copyright (C) 2014 Gabor Rapcsanyi <rgabor.dev@gmail.com>
+#
+# Everyone is permitted to copy and distribute verbatim or modified
+# copies of this license document, and changing it is allowed as long
+# as the name is changed.
+#
+# DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+# TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+#
+# 0. You just DO WHAT THE FUCK YOU WANT TO.
+
+"""sKout tool for browser bug hunting"""
+
+
+import optparse
+import os
+import sys
+
+from tools.kollektor import Kollektor
+from tools.konstruktor import Konstruktor
+from tools.reduktor import Reduktor
+
+
+def run(options):
+    if options.kollekt:
+        if not options.directory or options.directory and not os.path.exists(options.directory):
+            print('Must specify an existing search directory!')
+            return
+
+        kollektor = Kollektor(elements_file=options.elements_file,
+                              directory=options.directory,
+                              pattern=options.pattern)
+        kollektor.collect()
+    elif options.konstrukt:
+        if not os.path.exists(options.elements_file):
+            print(options.elements_file + ' does not exist!')
+            return
+
+        konstruktor = Konstruktor(elements_file=options.elements_file,
+                                  node_num=options.nodes,
+                                  attr_num=options.attributes,
+                                  totally_random=options.totally_random,
+                                  out_file=options.out_file)
+        konstruktor.construct()
+    elif options.redukt:
+        if not options.in_file or not os.path.isfile(options.in_file):
+            print(options.in_file + ' input file does not exist!')
+            return
+
+        if not options.browser or not os.path.isfile(options.browser):
+            print('Must specify a browser!')
+            return
+
+        reduktor = Reduktor(browser=options.browser,
+                            in_file=options.in_file,
+                            out_file=options.out_file,
+                            browser_timeout=options.browser_timeout)
+        reduktor.reduct()
+    else:
+        print('Choose your destiny!')
+
+def main():
+    option_parser = optparse.OptionParser()
+
+    option_parser.add_option('-v', '--verbose', action='store_true', help='Verbosed output')
+    option_parser.add_option('-c', '--kollekt', action='store_true', help='Collect possible nodes, attributes, values from files')
+    option_parser.add_option('-t', '--konstrukt', action='store_true', help='Construct random HTML test')
+    option_parser.add_option('-r', '--redukt', action='store_true', help='Reduce the given HTML test')
+
+    option_parser.add_option('--elements-file', dest='elements_file', default='elements.json', type='string', help='Path where to store/load elements data [default:%default]')
+    option_parser.add_option('--out-file', dest='out_file', default='test.html', type='string', help='Path for output file (redukt, konstrukt) [default:%default]')
+
+    group = optparse.OptionGroup(option_parser, 'Kollektor options')
+    group.add_option('-d', '--directory', type='string', help='Directory to search HTML files')
+    group.add_option('-p', '--pattern', type='string', default='.*\.(xhtml|html|svg)$', help='Search pattern for file names [default:\'%default\']')
+    option_parser.add_option_group(group)
+
+    group = optparse.OptionGroup(option_parser, 'Konstruktor options')
+    group.add_option('-n', '--nodes', default=50, type='int', help='Maximum node count [default: %default]')
+    group.add_option('-a', '--attributes', default=3, type='int', help='Attribute count per node [default: %default]')
+    group.add_option('--totally-random', dest='totally_random', default=False, action='store_true', help='Contruct totally random HTML [default: no]')
+    option_parser.add_option_group(group)
+
+    group = optparse.OptionGroup(option_parser, 'Reduktor options')
+    group.add_option('--browser', type='string', help='Path for the browser')
+    group.add_option('--browser-timeout', default=2, type='int', dest='browser_timeout', help='Maximum waiting time for the browser to crash in seconds [default: %default]')
+    group.add_option('--in-file', dest='in_file', default='test.html', type='string', help='Path for input file [default:%default]')
+    option_parser.add_option_group(group)
+
+    options, args = option_parser.parse_args()
+    run(options)
+
+if '__main__' == __name__:
+    main()
