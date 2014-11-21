@@ -74,16 +74,19 @@ class Konstruktor(object):
             parent = self.rand_element(children)
             parent_str = str(parent.tag)
 
-            new_child = ""
+            child_str = ""
 
             if self._totally_random:
-                new_child = self.rand_element(all_nodes)
+                child_str = self.rand_element(all_nodes)
             else:
                 if parent_str not in self._node_to_node:
                     continue
-                new_child = self.rand_element(self._node_to_node[parent_str])
+                child_str = self.rand_element(self._node_to_node[parent_str])
 
-            children.append(etree.SubElement(parent, new_child))
+            new_child = etree.SubElement(parent, child_str)
+            new_child.text = 'sKout'
+
+            children.append(new_child)
             node_num -= 1
 
 
