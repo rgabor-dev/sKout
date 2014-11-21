@@ -46,7 +46,7 @@ class Kollektor(object):
                     file_path = os.path.join(root, file_name)
                     tree = etree.parse(file_path, parser)
                     root_node = tree.getroot()
-                    if root != None:
+                    if root_node != None:
                         self.gather_data(root_node)
 
         for key in self._element_collection.keys():
