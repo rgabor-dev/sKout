@@ -41,17 +41,32 @@ def write_tree_to_file(root_node, file_name):
 def browser_run(browser, test_file, timeout):
     proc = subprocess.Popen([browser, test_file], stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
     crashing = True
-    output = ''
+    output = b''
     try:
         output, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
         crashing = False
 
-    return crashing, str(output)
+    return crashing, output.decode("utf-8")
+
+
+def only_assert(crash_log):
+    # WebKit specific
+    assert_pattern = 'ASSERTION FAILED:'
+
+    for line in crash_log.splitlines():
+        if line.find(assert_pattern) >= 0:
+            return line
+    return None
 
 
 def match_crash_output(crash_log1, crash_log2):
+    new_crash_log1 = only_assert(crash_log1)
+    new_crash_log2 = only_assert(crash_log2)
+    if (new_crash_log1 != None and new_crash_log2 != None):
+        return new_crash_log1 == new_crash_log2
+
     # remove the memory adresses
     str1 = re.sub(r'0x[a-f0-9]*', '', crash_log1)
     str2 = re.sub(r'0x[a-f0-9]*', '', crash_log2)

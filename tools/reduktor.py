@@ -16,6 +16,7 @@
 
 
 import copy
+import os
 
 from lxml import etree
 from tools import utility
@@ -40,19 +41,49 @@ class Reduktor(object):
 
       # check whether it's a real crash
       utility.write_tree_to_file(root, self._out_file)
-      crashing, crash_output = utility.browser_run(self._browser, self._out_file, self._browser_timeout)
+      crashing, crash_output = self.is_crashing(check_expected=False)
       self._expected_crash_output = crash_output
 
       if crashing:
           root = self.remove_unwanted_nodes(root)
+          root = self.reorder_nodes(root)
+          root = self.remove_unwanted_nodes(root)
           root = self.remove_unwanted_attributes(root)
+          root = self.remove_unwanted_text(root)
           utility.write_tree_to_file(root, self._out_file)
       else:
+          os.remove(self._out_file)
           print('Not crashing...')
 
 
+    def reorder_nodes(self, root):
+        not_movable = set()
+        success = True
+        while success:
+            success = False
+            nodes = self.ordered_node_list(root)
+            for node in nodes:
+                if not node in not_movable:
+                    parent = node.getparent()
+                    grand_parent = parent.getparent()
+                    if grand_parent != None:
+                        index = parent.index(node)
+                        grand_parent.append(node)
+
+                        utility.write_tree_to_file(root, self._out_file)
+                        if not self.is_crashing()[0]:
+                            parent.insert(index, node)
+                            not_movable.add(node)
+                        else:
+                            success = True
+                            break
+
+        utility.write_tree_to_file(root, self._out_file)
+        return root
+
+
     def remove_unwanted_nodes(self, root):
-        nodes = self.removable_nodes(root)
+        nodes = self.ordered_node_list(root)
         i = 0
         while i < len(nodes):
             node = nodes[i]
@@ -61,10 +92,10 @@ class Reduktor(object):
             parent.remove(node)
 
             utility.write_tree_to_file(root, self._out_file)
-            if not self.is_crashing_with_expected_output():
+            if not self.is_crashing()[0]:
                 root = saved_tree
                 i += 1
-            nodes = self.removable_nodes(root)
+            nodes = self.ordered_node_list(root)
 
         utility.write_tree_to_file(root, self._out_file)
         return root
@@ -78,21 +109,41 @@ class Reduktor(object):
                 del node.attrib[attr_str]
 
                 utility.write_tree_to_file(root, self._out_file)
-                if not self.is_crashing_with_expected_output():
+                if not self.is_crashing()[0]:
                     node.set(attr_str, value_str)
 
         utility.write_tree_to_file(root, self._out_file)
         return root
 
 
-    def removable_nodes(self, root):
-        nodes = sorted(list(root.iter()), key=lambda child: len(list(child.iter())), reverse=True)
+    def remove_unwanted_text(self, root):
+        for node in root.iter():
+            text = node.text
+            node.text = ''
+            utility.write_tree_to_file(root, self._out_file)
+            if not self.is_crashing()[0]:
+                node.text = text
+
+        utility.write_tree_to_file(root, self._out_file)
+        return root
+
+
+    def ordered_node_list(self, root, decreasing_order=True):
+        nodes = sorted(list(root.iter()), key=lambda child: len(list(child.iter())), reverse=decreasing_order)
         nodes.remove(root)
         return nodes
 
 
-    def is_crashing_with_expected_output(self):
-        crashing, crash_output = utility.browser_run(self._browser, self._out_file, self._browser_timeout)
-        if crashing and utility.match_crash_output(crash_output, self._expected_crash_output):
-            return True
-        return False
+    def is_crashing(self, check_expected=True, max_try=3):
+        while max_try > 0:
+            crashing, output = utility.browser_run(self._browser, self._out_file, self._browser_timeout)
+            if check_expected:
+                if crashing and utility.match_crash_output(output, self._expected_crash_output):
+                    return crashing, output
+            else:
+                if crashing:
+                    return crashing, output
+
+            max_try -= 1
+
+        return False, ''
